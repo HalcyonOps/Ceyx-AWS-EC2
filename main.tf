@@ -1,29 +1,39 @@
-provider "aws" {
-  region = var.region
-}
+resource "aws_instance" "this" {
+  count                       = var.create ? 1 : 0
+  ami                         = var.ami_id
+  instance_type               = var.instance_type
+  subnet_id                   = var.subnet_id
+  key_name                    = var.key_name
+  associate_public_ip_address = false
 
-module "vpc" {
-  source = "./modules/vpc"
-}
+  # Metadata Options
+  metadata_options {
+    http_endpoint               = var.metadata_options.http_endpoint
+    http_tokens                 = "required" # Enforce IMDSv2
+    http_put_response_hop_limit = var.metadata_options.http_put_response_hop_limit
+    instance_metadata_tags      = var.metadata_options.instance_metadata_tags
+  }
 
-module "ec2_instance" {
-  source = "./modules/ec2_instance"
-  vpc_id = module.vpc.vpc_id
-}
+  # EBS Optimization
+  ebs_optimized = var.enable_ebs_optimization
 
-# Example of variable definitions
-variable "region" {
-  description = "The AWS region to deploy resources in."
-  type        = string
-}
+  # Detailed Monitoring
+  monitoring = true
 
-# Example of outputs
-output "vpc_id" {
-  description = "The ID of the VPC created by the vpc module."
-  value       = module.vpc.vpc_id
-}
+  # IAM Instance Profile as Input Variable
+  iam_instance_profile = var.iam_instance_profile
 
-output "ec2_instance_ids" {
-  description = "The IDs of the EC2 instances created by the ec2_instance module."
-  value       = module.ec2_instance.instance_ids
+  # Root Block Device with Encryption
+  root_block_device {
+    volume_size = 8
+    encrypted   = true
+  }
+
+  # Tags
+  tags = local.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+  }
 }
