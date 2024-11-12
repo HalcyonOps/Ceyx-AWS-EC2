@@ -23,4 +23,18 @@ run "deploy_and_verify_ec2" {
     condition     = aws_instance.this.key_name == var.key_name
     error_message = "EC2 instance key name does not match the expected value."
   }
+
+  assert {
+    condition     = aws_instance.this.ebs_optimized == true
+    error_message = "EC2 instance is not EBS optimized."
+  }
+}
+
+run "verify_ebs_optimization" {
+  command = plan
+
+  assert {
+    condition     = aws_instance.this[0].ebs_optimized == true
+    error_message = "EBS optimization must be enabled for production instances"
+  }
 }

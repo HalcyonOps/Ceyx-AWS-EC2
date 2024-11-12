@@ -1,51 +1,35 @@
-resource "aws_instance" "this" {
-  count                       = var.create ? 1 : 0
+resource "aws_instance" "dedicated" {
+  count                       = var.create && var.use_dedicated_host ? 1 : 0
   ami                         = var.ami_id
   instance_type               = var.instance_type
   subnet_id                   = var.subnet_id
   key_name                    = var.key_name
   associate_public_ip_address = false
+  tenancy                     = "host"
+  host_id                     = var.dedicated_host_id
 
-  # Metadata Options
+  # Security configurations
   metadata_options {
-    http_endpoint               = "enabled"
+    http_endpoint               = var.metadata_options.http_endpoint
     http_tokens                 = "required" # Enforce IMDSv2
-    http_put_response_hop_limit = 1          # Restrict token propagation
-    instance_metadata_tags      = "enabled"  # Enable instance tags in metadata
+    http_put_response_hop_limit = var.metadata_options.http_put_response_hop_limit
+    instance_metadata_tags      = var.metadata_options.instance_metadata_tags
   }
 
-  # EBS Optimization
-  ebs_optimized = var.enable_ebs_optimization
-
-  # Detailed Monitoring
-  monitoring = true
-
-  # IAM Instance Profile as Input Variable
-  iam_instance_profile = var.iam_instance_profile
-
-  lifecycle {
-    create_before_destroy = true
-    prevent_destroy       = true
-    ignore_changes = [
-      # Prevent unintended changes to sensitive configurations
-      user_data,
-      user_data_base64,
-    ]
-  }
-
-  # Security group configuration
+  # All other security configurations from main.tf
+  ebs_optimized          = var.enable_ebs_optimization
+  monitoring             = true
+  iam_instance_profile   = var.iam_instance_profile
   vpc_security_group_ids = var.security_group_ids
-
-  # User data configuration with proper encoding
-  user_data                   = var.user_data != "" ? base64encode(var.user_data) : null
-  user_data_replace_on_change = true
 
   # Root volume configuration with encryption
   root_block_device {
     encrypted             = true
     volume_type           = "gp3"
+    iops                  = 3000
+    throughput            = 125
     volume_size           = var.root_volume_size
-    delete_on_termination = false # Prevent accidental data loss
+    delete_on_termination = false
     tags = merge(
       local.common_tags,
       {
@@ -96,12 +80,26 @@ resource "aws_instance" "this" {
     delete = "1h"
   }
 
-  # Required tags plus additional custom tags
+  # User data configuration with proper encoding
+  user_data                   = var.user_data != "" ? base64encode(var.user_data) : null
+  user_data_replace_on_change = true
+
+  # Lifecycle configuration
+  lifecycle {
+    create_before_destroy = true
+    prevent_destroy       = true
+    ignore_changes = [
+      user_data,
+      user_data_base64,
+    ]
+  }
+
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.environment}-${var.project}-instance"
+      Name = "${var.environment}-${var.project}-dedicated-instance"
     },
     var.additional_tags
   )
 }
+
