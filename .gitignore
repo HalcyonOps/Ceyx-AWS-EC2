@@ -98,7 +98,6 @@ packer_cache/
 !/.golangci.yml
 !/.env.example
 !*.tfvars.example
-!*.aiderignore
 
 # Go
 go.mod
@@ -106,5 +105,4 @@ go.sum
 
 # Custom ignores
 # Add any additional files or directories you wish to ignore below
-.aider.*
 .env
