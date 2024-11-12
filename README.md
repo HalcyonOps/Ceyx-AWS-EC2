@@ -5,6 +5,7 @@ A Terraform module to provision AWS EC2 instances with configurable security gro
 ## Overview
 
 This module creates EC2 instances with:
+
 - Specified AMI and instance type
 - Placement within designated subnets
 - Security groups with controlled inbound and outbound traffic
