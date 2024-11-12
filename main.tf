@@ -29,8 +29,24 @@ resource "aws_instance" "this" {
     encrypted   = true
   }
 
+  # Security Groups
+  vpc_security_group_ids = var.security_group_ids
+
+  # User Data
+  user_data = var.user_data != "" ? var.user_data : (var.user_data_base64 != "" ? base64decode(var.user_data_base64) : null)
+
+  # Spot Price
+  spot_price = var.use_spot_instances ? var.spot_price : null
+
   # Tags
-  tags = local.common_tags
+  tags = merge(
+    local.common_tags,
+    {
+      Environment = var.environment
+      Project     = var.project
+      Owner       = var.owner
+    }
+  )
 
   lifecycle {
     create_before_destroy = true
